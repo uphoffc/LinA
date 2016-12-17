@@ -1,0 +1,7 @@
+Import('env')
+
+files = ['main.cpp', 'Kernels.cpp', 'GEMM.cpp', 'Model.cpp', 'GlobalMatrices.cpp', 'Simulator.cpp', 'WaveFieldWriter.cpp', 'InitialCondition.cpp']
+for i in files:
+  env.sourceFiles.append(env.Object(i))
+
+Export('env')

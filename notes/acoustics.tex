@@ -1,0 +1,243 @@
+\documentclass[a4paper]{scrartcl}
+\usepackage[margin=1.5cm]{geometry}
+
+\usepackage{amsmath}
+\usepackage{cleveref}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amsthm}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{booktabs}
+\usepackage{csquotes}
+\usepackage{algpseudocode}
+\usepackage{pdflscape}
+
+\renewcommand{\vec}{\mathbf}
+\renewcommand{\Re}{\operatorname{Re}}
+\renewcommand{\Im}{\operatorname{Im}}
+\newcommand{\dd}[1]{\,\mathrm{d}#1}
+\newcommand{\ca}[1]{\accentset{\circ}{#1}}
+\newcommand{\vp}[2]{\left<#1,#2\right>}
+\newcommand{\abs}[1]{\left\lvert#1\right\rvert}
+\newcommand{\diag}[1]{\mathrm{diag}\left(#1\right)}
+\newcommand{\R}{\mathbb{R}}
+
+\renewcommand{\epsilon}{\varepsilon}
+\renewcommand{\theta}{\vartheta}
+
+\begin{document}
+\textbf{\Huge Warning: These are my notes. Don't expect this document to be self-contained and correct.}
+
+\section{ADER-DG for linear acoustics}
+The linearized acoustic equations are given as (see Finite Volume book by LeVeque)
+\begin{equation}\label{eq:pde}
+ \frac{\partial Q_p}{\partial t} + A_{pq}\frac{\partial Q_q}{\partial x} + B_{pq}\frac{\partial Q_q}{\partial y} = 0,
+\end{equation}
+where
+\begin{equation}
+ q = \begin{pmatrix}p \\ u \\ v\end{pmatrix}, \quad
+ A = \begin{pmatrix}0 & K_0 & 0 \\ 1/\rho_0 & 0 & 0 \\ 0 & 0 & 0 \end{pmatrix}, \quad
+ B = \begin{pmatrix}0 & 0 & K_0 \\ 0 & 0 & 0 \\ 1/\rho_0 & 0 & 0 \end{pmatrix}.
+\end{equation}
+
+The corresponding weak form is
+\begin{equation}
+ \int_{\Omega}\phi_k\frac{\partial Q_p}{\partial t}\dd{V} +
+ \int_{\partial\Omega}\phi_k \left(n_xA_{pq} + n_yB_{pq}\right)Q_q\dd{S} -
+ \int_{\Omega}\left(\frac{\partial \phi_k}{\partial x}A_{pq}Q_q + \frac{\partial \phi_k}{\partial y}B_{pq}Q_q\right)\dd{V} = 0,
+\end{equation}
+where $n=(n_x,n_y)$ is the outward unit surface normal.
+
+We discretise the weak form with finite elements, which are axis aligned rectangles $\mathcal R^{(m)}$, and obtain
+\begin{equation}
+ \int_{\mathcal R^{(m)}}\phi_k\frac{\partial Q_p}{\partial t}\dd{V} +
+ \int_{\partial\mathcal R^{(m)}}\phi_k \left(\left(n_xA_{pq} + n_yB_{pq}\right)Q_q\right)^*\dd{S} -
+ \int_{\mathcal R^{(m)}}\left(\frac{\partial \phi_k}{\partial x}A_{pq} + \frac{\partial \phi_k}{\partial y}B_{pq}\right)Q_q\dd{V} = 0,
+\end{equation}
+where we a numerical flux (indicated with *).
+
+Suppose we are given a grid of points
+$P_{i,j} = \left(ih_x, jh_y\right)$, where $(i,j) \in [0,X]\times [0,Y]$ and $h_x,h_y > 0$.
+Then a rectangle $R^{(m)}$ with $m=(i,j)$, where $i < X$ and $j < Y$, is given by the four points
+$\left\{P_{i,j}, P_{i+1,j}, P_{i,j+1}, P_{i+1,j+1}\right\}$. 
+
+We approximate $Q$ with a modal basis, i.e.
+\begin{equation}
+ Q_p^h(x,y,t) = \hat{Q}_{lp}\left(t\right)\phi_l\left(\xi^{(m)}(x,y), \eta^{(m)}(x,y)\right),
+\end{equation}
+where
+\begin{equation}
+ \xi^{(m)}(x,y) = \frac{x-(P_m)_1}{h_x}, \quad
+ \eta^{(m)}(x,y) = \frac{y-(P_m)_2}{h_y}.
+\end{equation}
+
+Then we obtain, using the substitution rule,
+\begin{multline}
+ |J|\frac{\partial \hat{Q}_{lp}}{\partial t}(t)\int_{0}^{1}\int_{0}^{1}\phi_k(\xi,\eta)\phi_l(\xi,\eta)\dd{\eta}\dd{\xi} \\
+ + h_x\int_{0}^{1}\phi_k(\xi,1)\left(B_{pq}Q_q\right)^* \dd{\xi} - h_x\int_{0}^{1}\phi_k(\xi,0)\left(B_{pq}Q_q\right)^* \dd{\xi} \\
+ + h_y\int_{0}^{1}\phi_k(1,\eta)\left(A_{pq}Q_q\right)^* \dd{\eta} - h_y\int_{0}^{1}\phi_k(0,\eta)\left(A_{pq}Q_q\right)^* \dd{\eta} \\
+ - |J|\hat{Q}_{lp}(t)\int_{0}^{1}\int_{0}^{1}\left(\frac{1}{h_x}\frac{\partial \phi_k}{\partial \xi}(\xi,\eta)A_{pq} + \frac{1}{h_y}\frac{\partial \phi_k}{\partial \eta}(\xi,\eta)B_{pq}\right)\phi_l(\xi,\eta)\dd{\eta}\dd{\xi} = 0,
+\end{multline}
+where $|J|=h_xh_y$.
+
+We turn now to the flux term. First, note that we may use rotational invariance:
+\begin{equation}
+ n_xA + n_yB = TAT^{-1},
+\end{equation}
+where
+\begin{equation}
+T(n_x,n_y)=\begin{pmatrix}
+ 1 & 0 & 0 \\
+ 0 & n_x & -n_y \\
+ 0 & n_y & n_x
+\end{pmatrix}, \quad
+T^{-1}(n_x,n_y)=\begin{pmatrix}
+ 1 & 0 & 0 \\
+ 0 & n_x & n_y \\
+ 0 & -n_y & n_x
+\end{pmatrix},
+\end{equation}
+i.e. we only need to solve the Riemann problem in x-direction. In the homogeneous case we have
+\begin{equation}
+ A^{+} = \frac{1}{2}\begin{pmatrix}
+ c & K_0 & 0 \\
+ 1/\rho_0 & c & 0 \\
+ 0 & 0 & 0
+\end{pmatrix}, \quad
+ A^{-} = \frac{1}{2}\begin{pmatrix}
+ -c & K_0 & 0 \\
+ 1/\rho_0 & -c & 0 \\
+ 0 & 0 & 0
+\end{pmatrix},
+\end{equation}
+where $c=\sqrt{K_0/\rho_0}$.
+
+In the inhomogeneous case we have
+\begin{equation}
+ A^{+} = \begin{pmatrix}
+ \frac{K_0^+c^-c^+}{K_0^-c^++K_0^+c^-} & \frac{K_0^-K_0^+c^+}{K_0^-c^++K_0^+c^-} & 0 \\
+ \frac{K_0^+c^-}{\rho_0^+\left(K_0^-c^++K_0^+c^-\right)} & \frac{K_0^-K_0^+}{\rho_0^+\left(K_0^-c^++K_0^+c^-\right)} & 0 \\
+ 0 & 0 & 0
+\end{pmatrix}, \quad
+ A^{-} = \begin{pmatrix}
+ -\frac{K_0^-c^-c^+}{K_0^-c^++K_0^+c^-} & \frac{K_0^-K_0^+c^-}{K_0^-c^++K_0^+c^-} & 0 \\
+ \frac{K_0^-c^+}{\rho_0^-\left(K_0^-c^++K_0^+c^-\right)} & -\frac{K_0^-K_0^+}{\rho_0^-\left(K_0^-c^++K_0^+c^-\right)} & 0 \\
+ 0 & 0 & 0
+\end{pmatrix}.
+\end{equation}
+Hence, the flux is given as
+\begin{equation}
+ TA^-T^{-1}Q^- + TA^+T^{-1}Q^+.
+\end{equation}
+For ease of notation, we define
+\begin{equation}
+ \mathcal{A}^{x,y,\pm} = T(x,y)A^\pm T(x,y)^{-1}.
+\end{equation}
+
+Note, that we need the transposed version as we multiply the matrix from the right. Hence,
+with abuse of notation we define
+
+\begin{equation}
+ \mathcal{A}^{x,y,\pm} = T^{-T}\left(A^\pm\right)^T T^{T} = T\left(A^\pm\right)^T T^{-1},
+\end{equation}
+where we used that $T^{-1}=T^T$.
+
+
+
+We are now able to obtain the complete semi-discrete scheme:
+\begin{multline}
+ |J|\frac{\partial \hat{Q}_{lp}}{\partial t}(t)\int_{0}^{1}\int_{0}^{1}\phi_k(\xi,\eta)\phi_l(\xi,\eta)\dd{\eta}\dd{\xi} \\
+ + h_x\mathcal{A}_{pq}^{0,1,+}\hat{Q}_{lp}(t)\int_{0}^{1}\phi_k(\xi,1)\phi_l(\xi,1) \dd{\xi}
+ + h_x\mathcal{A}_{pq}^{0,1,-}\hat{Q}^{(i,j+1)}_{lp}(t)\int_{0}^{1}\phi_k(\xi,1)\phi_l(\xi,0) \dd{\xi} \\
+ + h_x\mathcal{A}_{pq}^{0,-1,+}\hat{Q}_{lp}(t)\int_{0}^{1}\phi_k(\xi,0)\phi_l(\xi,0) \dd{\xi}
+ + h_x\mathcal{A}_{pq}^{0,-1,-}\hat{Q}^{(i,j-1)}_{lp}(t)\int_{0}^{1}\phi_k(\xi,0)\phi_l(\xi,1) \dd{\xi} \\
+ + h_y\mathcal{A}_{pq}^{1,0,+}\hat{Q}_{lp}(t)\int_{0}^{1}\phi_k(1,\eta)\phi_l(1,\eta) \dd{\eta}
+ + h_y\mathcal{A}_{pq}^{1,0,-}\hat{Q}^{(i+1,j)}_{lp}(t)\int_{0}^{1}\phi_k(1,\eta)\phi_l(0,\eta) \dd{\eta} \\
+ + h_y\mathcal{A}_{pq}^{-1,0,+}\hat{Q}_{lp}(t)\int_{0}^{1}\phi_k(0,\eta)\phi_l(0,\eta) \dd{\eta} 
+ + h_y\mathcal{A}_{pq}^{-1,0,-}\hat{Q}^{(i-1,j)}_{lp}(t)\int_{0}^{1}\phi_k(0,\eta)\phi_l(1,\eta) \dd{\eta} \\
+ - |J|\hat{Q}_{lp}(t)\int_{0}^{1}\int_{0}^{1}\left(\frac{1}{h_x}\frac{\partial \phi_k}{\partial \xi}(\xi,\eta)A_{pq} + \frac{1}{h_y}\frac{\partial \phi_k}{\partial \eta}(\xi,\eta)B_{pq}\right)\phi_l(\xi,\eta)\dd{\eta}\dd{\xi} = 0,
+\end{multline}
+
+To be precomputed:
+\begin{align*}
+ M_{kl} &= \int_{0}^{1}\int_{0}^{1}\phi_k(\xi,\eta)\phi_l(\xi,\eta)\dd{\eta}\dd{\xi} \\
+ F_{kl}^{x,-,s} &= \int_{0}^{1}\phi_k(\xi,s)\phi_l(\xi,s) \dd{\xi} \\
+ F_{kl}^{x,+,s} &= \int_{0}^{1}\phi_k(\xi,s)\phi_l(\xi,1-s) \dd{\xi} \\
+ F_{kl}^{y,-,s} &= \int_{0}^{1}\phi_k(s,\eta)\phi_l(s,\eta) \dd{\eta} \\
+ F_{kl}^{y,+,s} &= \int_{0}^{1}\phi_k(s,\eta)\phi_l(1-s,\eta) \dd{\eta} \\
+ K_{kl}^\xi &= \int_{0}^{1}\int_{0}^{1}\frac{\partial\phi_k}{\partial\xi}(\xi,\eta)\phi_l(\xi,\eta)\dd{\eta}\dd{\xi} \\
+ K_{kl}^\eta &= \int_{0}^{1}\int_{0}^{1}\frac{\partial\phi_k}{\partial\eta}(\xi,\eta)\phi_l(\xi,\eta)\dd{\eta}\dd{\xi}
+\end{align*}
+
+\subsection{$L^2$ projection}
+It might become necessary to project a function on the basis functions, i.e. we require the integral
+\begin{equation}
+ |J|\int_{0}^{1}\int_{0}^{1}\phi_k(\xi,\eta)f\left(x(\xi,\eta),y(\xi,\eta)\right)\dd{\eta}\dd{\xi}
+\end{equation}
+which can be approximated with a quadrature rule $(\chi, \omega)$ (on $[-1,1]$).
+\begin{multline}
+ |J|\int_{0}^{1}\int_{0}^{1}\phi_k(\xi,\eta)f\left(x(\xi,\eta),y(\xi,\eta)\right)\dd{\eta}\dd{\xi} = \\
+ \frac{|J|}{2}\int_{0}^{1}\sum_{j=0}^N\omega_j\phi_k\left(\xi,\frac{\chi_j+1}{2}\right)f\left(x\left(\xi,\frac{\chi_j+1}{2}\right),y\left(\xi,\frac{\chi_j+1}{2}\right)\right)\dd{\xi} =\\
+ \frac{|J|}{4}\sum_{i=0}^N\sum_{j=0}^N\omega_i\omega_j\phi_k\left(\frac{\chi_i+1}{2},\frac{\chi_j+1}{2}\right)f\left(x\left(\frac{\chi_i+1}{2},\frac{\chi_j+1}{2}\right),y\left(\frac{\chi_i+1}{2},\frac{\chi_j+1}{2}\right)\right)\dd{\xi}
+\end{multline}
+
+\subsection{Convergence test}
+We assume homogeneous material parameters and we assume that our solution is a plane wave of the form
+\begin{equation}
+ Q_p(x,y,t) = Q_p^0\sin\left(\omega t-k_xx-k_yy\right).
+\end{equation}
+Inserting the solution into \Cref{eq:pde} yields
+\begin{equation}
+ \left(\omega I_{pq} - k_xA_{pq} - k_yB_{pq}\right)Q_q^0\cos\left(\omega t-k_xx-k_yy\right) = 0,
+\end{equation}
+where $I$ is an identity matrix. So either the cosine term is zero or
+\begin{equation}
+ \left(\omega I_{pq} - k_xA_{pq} - k_yB_{pq}\right)Q_q^0 = 0
+\end{equation}
+must hold. This is equivalent to the following eigenvalue problem:
+\begin{equation}
+ \left(k_xA_{pq} + k_yB_{pq}\right)Q_q^0 = \omega Q_q^0
+\end{equation}
+So $\omega$ must be an eigenvalue and $Q_q^0$ must be an eigenvector of the matrix
+\begin{equation}
+ k_xA + k_yB = \lVert k\rVert T\left(\frac{k_x}{\lVert k\rVert},\frac{k_y}{\lVert k\rVert}\right)AT\left(\frac{k_x}{\lVert k\rVert},\frac{k_y}{\lVert k\rVert}\right)^{-1},
+\end{equation}
+where we used rotational invariance. Let $(\lambda_i,r_i)$ be eigenvalue and corresponding
+eigenvector of $A$. Then
+\begin{equation}
+ Q^0 = T\left(\frac{k_x}{\lVert k\rVert},\frac{k_y}{\lVert k\rVert}\right)r_i, \text{ and } \omega = \lVert k\rVert\lambda_i
+\end{equation}
+solves the homogeneous problem with initial condition $Q_p(x,y,0) = Q_p^0\sin(-k_xx-k_yy)$.
+
+For the convergence test we choose $r_i = (K_0, c, 0)^T, \omega = c, k_x=2\pi, k_y=2\pi$. Then
+\begin{equation}
+ T\left(\sqrt{2}/2,\sqrt{2}/2\right)r_i = \begin{pmatrix}
+              1 & 0 & 0 \\
+              0 & \sqrt{2}/2 & -\sqrt{2}/2 \\
+              0 & \sqrt{2}/2 & \sqrt{2}/2 \\
+             \end{pmatrix}
+\begin{pmatrix}K_0\\ c \\ 0\end{pmatrix} = 
+\begin{pmatrix}K_0\\ \sqrt{2}c/2 \\ \sqrt{2}c/2\end{pmatrix}, \text{ and } \omega = 2\sqrt{2}\pi c.
+\end{equation}
+Due to periodic boundary conditions, after $1/2$ seconds the solution is equal to the initial condition.
+
+\subsection{Source terms}
+Assume we have a source term of the form
+\begin{equation}
+ S_p(t)\delta(x_s,y_s)
+\end{equation}
+then we need to add
+\begin{equation}
+ \frac{1}{|J|}M_{kq}^{-1}\phi_q\left(\xi(x_s,y_s),\eta(x_s,y_s) \right)\int_{t_n}^{t_n+\Delta t} S_p(t)\dd{t}
+\end{equation}
+to the cell that contains the source term.
+
+
+
+
+
+
+\end{document}
