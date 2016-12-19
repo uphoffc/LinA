@@ -70,8 +70,8 @@ void initScenario2(GlobalConstants& globals, Grid<Material>& materialGrid, Grid<
   double ys = 0.5;
   sourceterm.x = static_cast<int>(xs / (globals.hx));
   sourceterm.y = static_cast<int>(ys / (globals.hy));
-  double xi = (xs - sourceterm.x) / globals.hx;
-  double eta = (ys - sourceterm.y) / globals.hy;
+  double xi = (xs - sourceterm.x*globals.hx) / globals.hx;
+  double eta = (ys - sourceterm.y*globals.hy) / globals.hy;
   
   initSourcetermPhi(xi, eta, sourceterm);
   

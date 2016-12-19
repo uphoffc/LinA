@@ -68,10 +68,10 @@ env.Append(CFLAGS   = ['-Wall', '-Werror', '-ansi'],
 if env['compileMode'] == 'debug':
   env.Append(CFLAGS  = ['-O0', '-g'],
              CXXFLAGS = ['-O0', '-g'])
-elif env['compileMode'] == ['release']:
-    env.Append(CPPDEFINES = ['NDEBUG'])
-    env.Append(CFLAGS   = ['-O3'],
-               CXXFLAGS = ['-O3'])
+elif env['compileMode'] == 'release':
+  env.Append(CPPDEFINES = ['NDEBUG'])
+  env.Append(CFLAGS   = ['-O3'],
+             CXXFLAGS = ['-O3'])
 
 #
 # Basic preprocessor defines
@@ -83,7 +83,7 @@ env.Append(CPPPATH=['#/src'])
 #
 # setup the program name and the build directory
 #
-env['programName'] = 'Acoustic'
+env['programName'] = 'lina'
 env['programFile'] = '%s/%s' %(env['buildDir'], env['programName'])
 
 # build directory
