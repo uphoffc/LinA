@@ -8,7 +8,7 @@
 
 class WaveFieldWriter {
 public:
-  WaveFieldWriter(std::string const& baseName, GlobalConstants const& globals, double interval);
+  WaveFieldWriter(std::string const& baseName, GlobalConstants const& globals, double interval, int pointsPerDim);
   ~WaveFieldWriter();
   
   void writeTimestep(double time, Grid<DegreesOfFreedom>& degreesOfFreedomGrid, bool forceWrite = false);
@@ -22,6 +22,9 @@ private:
   float*        m_vvel;
   double        m_interval;
   double        m_lastTime;
+  double*       m_subsampleMatrix;
+  double*       m_subsamples;
+  int           m_pointsPerDim;
 };
 
 
