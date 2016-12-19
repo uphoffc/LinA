@@ -60,9 +60,9 @@ void computeAplus( Material const&  local,
   double cm = local.wavespeed();
   double cp = neighbour.wavespeed();
   double div1 = 1.0 / (local.K0 * cp + neighbour.K0 * cm);
-  double div2 = div1 / neighbour.rho0;
-  Aplus[0*NUMBER_OF_QUANTITIES + 0] = neighbour.K0 * cm * cp * div1;
-  Aplus[0*NUMBER_OF_QUANTITIES + 1] = local.K0 * neighbour.K0 * cp * div1;
+  double div2 = div1 / local.rho0;
+  Aplus[0*NUMBER_OF_QUANTITIES + 0] = local.K0 * cm * cp * div1;
+  Aplus[0*NUMBER_OF_QUANTITIES + 1] = local.K0 * local.K0 * cp * div1;
   Aplus[1*NUMBER_OF_QUANTITIES + 0] = neighbour.K0 * cm * div2;
   Aplus[1*NUMBER_OF_QUANTITIES + 1] = local.K0 * neighbour.K0 * div2;
 }
