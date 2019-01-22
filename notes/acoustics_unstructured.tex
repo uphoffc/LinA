@@ -1,0 +1,237 @@
+\documentclass[a4paper]{scrartcl}
+\usepackage[margin=1.5cm]{geometry}
+
+\usepackage{amsmath}
+\usepackage{cleveref}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amsthm}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{booktabs}
+\usepackage{csquotes}
+\usepackage{algpseudocode}
+\usepackage{pdflscape}
+
+\renewcommand{\vec}{\mathbf}
+\renewcommand{\Re}{\operatorname{Re}}
+\renewcommand{\Im}{\operatorname{Im}}
+\newcommand{\dd}[1]{\,\mathrm{d}#1}
+\newcommand{\ca}[1]{\accentset{\circ}{#1}}
+\newcommand{\vp}[2]{\left<#1,#2\right>}
+\newcommand{\abs}[1]{\left\lvert#1\right\rvert}
+\newcommand{\diag}[1]{\mathrm{diag}\left(#1\right)}
+\newcommand{\R}{\mathbb{R}}
+
+\renewcommand{\epsilon}{\varepsilon}
+\renewcommand{\theta}{\vartheta}
+
+\begin{document}
+\textbf{\Huge Warning: These are my notes. Don't expect this document to be self-contained and correct.}
+
+\section{ADER-DG for linear acoustics}
+The linearized acoustic equations are given as (see Finite Volume book by LeVeque)
+\begin{equation}\label{eq:pde}
+ \frac{\partial Q_p}{\partial t} + A_{pq}\frac{\partial Q_q}{\partial x} + B_{pq}\frac{\partial Q_q}{\partial y} = 0,
+\end{equation}
+where
+\begin{equation}
+ q = \begin{pmatrix}p \\ u \\ v\end{pmatrix}, \quad
+ A = \begin{pmatrix}0 & K_0 & 0 \\ 1/\rho_0 & 0 & 0 \\ 0 & 0 & 0 \end{pmatrix}, \quad
+ B = \begin{pmatrix}0 & 0 & K_0 \\ 0 & 0 & 0 \\ 1/\rho_0 & 0 & 0 \end{pmatrix}.
+\end{equation}
+
+The corresponding weak form is
+\begin{equation}
+ \int_{\Omega}\phi_k\frac{\partial Q_p}{\partial t}\dd{V} +
+ \int_{\partial\Omega}\phi_k \left(n_xA_{pq} + n_yB_{pq}\right)Q_q\dd{S} -
+ \int_{\Omega}\left(\frac{\partial \phi_k}{\partial x}A_{pq}Q_q + \frac{\partial \phi_k}{\partial y}B_{pq}Q_q\right)\dd{V} = 0,
+\end{equation}
+where $n=(n_x,n_y)$ is the outward unit surface normal.
+
+We discretise the weak form with finite elements, which are triangles $\mathcal R^{(m)}$, and obtain
+\begin{equation}
+ \int_{\mathcal R^{(m)}}\phi_k\frac{\partial Q_p}{\partial t}\dd{V} +
+ \int_{\partial\mathcal R^{(m)}}\phi_k \left(\left(n_xA_{pq} + n_yB_{pq}\right)Q_q\right)^*\dd{S} -
+ \int_{\mathcal R^{(m)}}\left(\frac{\partial \phi_k}{\partial x}A_{pq} + \frac{\partial \phi_k}{\partial y}B_{pq}\right)Q_q\dd{V} = 0,
+\end{equation}
+where we a numerical flux (indicated with *).
+
+Suppose we are given an unstructured triangular grid where each cell is given by the 3 points
+$P_0,\dots,P_2$ in counter-clockwise order. The coordinates of each point is $P_i = (x_i,y_i)$.
+
+We approximate $Q$ with a modal basis, i.e.
+\begin{equation}
+ Q_p^h(x,y,t) = \hat{Q}_{lp}\left(t\right)\phi_l\left(\xi^{(m)}(x,y), \eta^{(m)}(x,y)\right),
+\end{equation}
+where
+\begin{align}
+ x(\xi,\eta) = x_0 + (x_1-x_0)\xi + (x_2-x_0)\eta, \\
+ y(\xi,\eta) = y_0 + (y_1-y_0)\xi + (y_2-y_0)\eta.
+\end{align}
+
+Then we obtain, using the substitution rule,
+\begin{multline}
+ |J|\frac{\partial \hat{Q}_{lp}}{\partial t}(t)\int_{0}^{1}\int_{0}^{1}\phi_k(\xi,\eta)\phi_l(\xi,\eta)\dd{\eta}\dd{\xi}
+ + \sum_{i=1}^3 |S_i|\int_0^1\phi_k(r_i(\chi))(n_xA_{pq}+n_yB_{pq}Q_q)^*\dd{\chi} \\
+ - |J|\hat{Q}_{lp}(t)\int_{0}^{1}\int_{0}^{1}\left(\frac{\partial \phi_k}{\partial x}(\xi,\eta)A_{pq}
+ + \frac{\partial \phi_k}{\partial y}(\xi,\eta)B_{pq}\right)\phi_l(\xi,\eta)\dd{\eta}\dd{\xi} = 0,
+\end{multline}
+where $J=(x_1-x_0)(y_2-y_0)-(x_2-x_0)(y_1-y_0)$, and $r_i$ and $|S_i|$ are given by
+\begin{align}
+ r_1(\chi) &= \begin{pmatrix}\chi \\ 0\end{pmatrix}, & |S_1| = \sqrt{(x_1-x_0)^2 + (y_1-y_0)^2}, \\
+ r_2(\chi) &= \begin{pmatrix}1-\chi \\ \chi\end{pmatrix}, & |S_2| = \sqrt{(x_2-x_1)^2 + (y_2-y_1)^2}, \\
+ r_3(\chi) &= \begin{pmatrix}0 \\ 1-\chi\end{pmatrix}, & |S_3| = \sqrt{(x_2-x_0)^2 + (y_2-y_0)^2}.
+\end{align}
+We also need to transform the gradients, that is,
+\begin{equation}
+ \begin{pmatrix}
+  \dfrac{\partial\phi_k}{\partial x} & \dfrac{\partial\phi_k}{\partial y}
+ \end{pmatrix} =
+ \begin{pmatrix}
+  \dfrac{\partial\phi_k}{\partial\xi} & \dfrac{\partial\phi_k}{\partial\eta}
+ \end{pmatrix}
+ \underbrace{
+ \begin{pmatrix}
+  \dfrac{\partial\xi}{\partial x} & \dfrac{\partial\xi}{\partial y} \\
+  \dfrac{\partial\eta}{\partial x} & \dfrac{\partial\eta}{\partial y}
+ \end{pmatrix}}_{=:D\boldsymbol{\xi}(x,y)}
+\end{equation}
+Using the inverse function theorem we have
+\begin{equation}
+ D\boldsymbol{\xi}(x,y) = [D\boldsymbol{x}(\xi,\eta)]^{-1} =
+ \begin{pmatrix}
+  x_1-x_0 & x_2-x_0 \\
+  y_1-y_0 & y_2-y_0
+ \end{pmatrix}^{-1} =
+ \dfrac{1}{J}
+ \begin{pmatrix}
+  y_2-y_0 & x_0-x_2 \\
+  y_0-y_1 & x_1-x_0
+ \end{pmatrix}.
+\end{equation}
+For later use we note
+\begin{align}
+ A^* = A\dfrac{\partial\xi}{\partial x} + B\dfrac{\partial\xi}{\partial y} =
+ \dfrac{y_2-y_0}{J}A + \dfrac{x_0-x_2}{J}B, \\
+ B^* = A\dfrac{\partial\eta}{\partial x} + B\dfrac{\partial\eta}{\partial y} =
+ \dfrac{y_0-y_1}{J}A + \dfrac{x_1-x_0}{J}B.
+\end{align}
+
+
+
+
+We turn now to the flux term, which shall have the following form:
+\begin{equation}
+ (n_xA_{pq}+n_yB_{pq}Q_q)^* = A^+Q_q^{(m)} + A^-Q_q^{(m_i)},
+\end{equation}
+where $m_i$ denotes the neighbour of element $m$.
+First, note that we may use rotational invariance:
+\begin{equation}
+ n_xA + n_yB = TAT^{-1},
+\end{equation}
+where
+\begin{equation}
+T(n_x,n_y)=\begin{pmatrix}
+ 1 & 0 & 0 \\
+ 0 & n_x & -n_y \\
+ 0 & n_y & n_x
+\end{pmatrix}, \quad
+T^{-1}(n_x,n_y)=\begin{pmatrix}
+ 1 & 0 & 0 \\
+ 0 & n_x & n_y \\
+ 0 & -n_y & n_x
+\end{pmatrix},
+\end{equation}
+i.e. we only need to solve the Riemann problem in x-direction. In the homogeneous case we have
+\begin{equation}
+ A^{+} = \frac{1}{2}\begin{pmatrix}
+ c & K_0 & 0 \\
+ 1/\rho_0 & c & 0 \\
+ 0 & 0 & 0
+\end{pmatrix}, \quad
+ A^{-} = \frac{1}{2}\begin{pmatrix}
+ -c & K_0 & 0 \\
+ 1/\rho_0 & -c & 0 \\
+ 0 & 0 & 0
+\end{pmatrix},
+\end{equation}
+where $c=\sqrt{K_0/\rho_0}$.
+
+In the inhomogeneous case we have
+\begin{equation}
+ A^{+} = \begin{pmatrix}
+ \frac{K_0^+c^-c^+}{K_0^-c^++K_0^+c^-} & \frac{K_0^-K_0^+c^+}{K_0^-c^++K_0^+c^-} & 0 \\
+ \frac{K_0^+c^-}{\rho_0^+\left(K_0^-c^++K_0^+c^-\right)} & \frac{K_0^-K_0^+}{\rho_0^+\left(K_0^-c^++K_0^+c^-\right)} & 0 \\
+ 0 & 0 & 0
+\end{pmatrix}, \quad
+ A^{-} = \begin{pmatrix}
+ -\frac{K_0^-c^-c^+}{K_0^-c^++K_0^+c^-} & \frac{K_0^-K_0^+c^-}{K_0^-c^++K_0^+c^-} & 0 \\
+ \frac{K_0^-c^+}{\rho_0^-\left(K_0^-c^++K_0^+c^-\right)} & -\frac{K_0^-K_0^+}{\rho_0^-\left(K_0^-c^++K_0^+c^-\right)} & 0 \\
+ 0 & 0 & 0
+\end{pmatrix}.
+\end{equation}
+Hence, the flux is given as
+\begin{equation}
+ TA^-T^{-1}Q^- + TA^+T^{-1}Q^+.
+\end{equation}
+For ease of notation, we define
+\begin{equation}
+ \mathcal{A}^{x,y,\pm} = T(x,y)A^\pm T(x,y)^{-1}.
+\end{equation}
+
+Note, that we need the transposed version as we multiply the matrix from the right. Hence,
+with abuse of notation we define
+
+\begin{equation}
+ \mathcal{A}^{x,y,\pm} = T^{-T}\left(A^\pm\right)^T T^{T} = T\left(A^\pm\right)^T T^{-1},
+\end{equation}
+where we used that $T^{-1}=T^T$.
+
+Finally, in order to correctly integrate over the neighbours we need the following integrals:
+$$
+\int_0^1\phi_k(r_i(\chi))\phi_l(r_j(1-\chi))\dd{\chi}
+$$
+Here $j$ is the number of the edge of the neighbour of the local edge $i$.
+
+We are now able to obtain the complete semi-discrete scheme:
+\begin{multline}
+|J|\frac{\partial \hat{Q}_{lp}}{\partial t}(t)\int_{0}^{1}\int_{0}^{1}\phi_k(\xi,\eta)\phi_l(\xi,\eta)\dd{\eta}\dd{\xi} \\
+ + \sum_{i=1}^3 |S_i|\mathcal{A}_{pq}^{n_{x,i},n_{y,i},+}\hat{Q}_{lp}(t)\int_0^1\phi_k(r_i(\chi))\phi_k(r_i(\chi))\dd{\chi} \\
+ + \sum_{i=1}^3 |S_i|\mathcal{A}_{pq}^{n_{x,i},n_{y,i},-}\hat{Q}_{lp}^{(m_j)}(t)\int_0^1\phi_k(r_i(\chi))\phi_k(r_j(1-\chi))\dd{\chi}\\
+ - |J|\hat{Q}_{lp}(t)A^*_{pq}\int_{0}^{1}\int_{0}^{1}\frac{\partial \phi_k}{\partial \xi}(\xi,\eta)\dd{\eta}\dd{\xi}
+ - |J|\hat{Q}_{lp}(t)B^*_{pq}\int_{0}^{1}\int_{0}^{1}\frac{\partial \phi_k}{\partial \eta}(\xi,\eta)\dd{\eta}\dd{\xi} = 0,
+\end{multline}
+
+To be precomputed:
+\begin{align*}
+ M_{kl} &= \int_{0}^{1}\int_{0}^{1}\phi_k(\xi,\eta)\phi_l(\xi,\eta)\dd{\eta}\dd{\xi} \\
+ F_{kl}^{i,0} &= \int_0^1\phi_k(r_i(\chi))\phi_k(r_i(\chi))\dd{\chi} \\
+ F_{kl}^{i,j} &= \int_0^1\phi_k(r_i(\chi))\phi_k(r_j(1-\chi))\dd{\chi} \\
+ K_{kl}^\xi &= \int_{0}^{1}\int_{0}^{1}\frac{\partial\phi_k}{\partial\xi}(\xi,\eta)\phi_l(\xi,\eta)\dd{\eta}\dd{\xi} \\
+ K_{kl}^\eta &= \int_{0}^{1}\int_{0}^{1}\frac{\partial\phi_k}{\partial\eta}(\xi,\eta)\phi_l(\xi,\eta)\dd{\eta}\dd{\xi}
+\end{align*}
+
+\subsection{Boundary conditions}
+Periodic boundary conditions are difficult in the unstructured case.
+We introduce two alternatives:
+\subsubsection{Absorbing boundary conditions}
+Set $\hat{Q}^+=0$.
+\subsubsection{Wall boundary conditions}
+Set $\hat{Q}^+=T\Gamma T^{-1}\hat{Q}^-$, where $\Gamma=\diag{1,-1,1}$.
+
+\subsection{Source terms}
+Assume we have a source term of the form
+\begin{equation}
+ S_p(t)\delta(x_s,y_s)
+\end{equation}
+then we need to add
+\begin{equation}
+ \frac{1}{|J|}M_{kq}^{-1}\phi_q\left(\xi(x_s,y_s),\eta(x_s,y_s) \right)\int_{t_n}^{t_n+\Delta t} S_p(t)\dd{t}
+\end{equation}
+to the cell that contains the source term.
+
+
+\end{document}

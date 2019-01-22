@@ -3,6 +3,7 @@
 import os
 import numpy
 import math
+import sys
 
 def readMatrixMarket(pathToMatrix):
   matrixFile = open(pathToMatrix)
@@ -26,7 +27,11 @@ def readMatrixMarket(pathToMatrix):
            'matrix':    matrix
          }
 
-matrixFiles = os.listdir('matrices')
+matrixDirectory = 'matrices'
+if len(sys.argv) >= 2:
+  matrixDirectory = sys.argv[1]
+
+matrixFiles = os.listdir(matrixDirectory)
 maxDegree = 11
 with open('GlobalMatrices.h', 'w') as header:
   with open('GlobalMatrices.cpp', 'w') as cpp:
@@ -48,7 +53,7 @@ with open('GlobalMatrices.h', 'w') as header:
       cpp.write('#elif CONVERGENCE_ORDER == {}\n'.format(degree+1))
       matrixFilesForDegree = filter(lambda x: int(x.split('_')[-1].split('.')[0]) == degree, matrixFiles)
       for matrixFile in matrixFilesForDegree:
-        matrixMarket = readMatrixMarket('matrices/' + matrixFile)
+        matrixMarket = readMatrixMarket(os.path.join(matrixDirectory, matrixFile))
         name = matrixFile.split('_')[0]
         header.write('  extern double const {}[];\n'.format(name))
         cpp.write('  double const {}[] = {{ {} }};\n'.format(name, ','.join([entry[2] for entry in matrixMarket['matrix']]) ))
